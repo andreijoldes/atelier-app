@@ -1,12 +1,13 @@
 {
-  "name": "Atelier Auto Manager",
+  "name": "Atelier Auto",
   "short_name": "Atelier",
-  "description": "Aplicație pentru gestionarea atelierului auto",
+  "description": "Gestionează atelierul tău auto",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#F0F4FF",
+  "background_color": "#ffffff",
   "theme_color": "#2563EB",
-  "orientation": "portrait-primary",
+  "orientation": "portrait",
+  "categories": ["business", "productivity"],
   "icons": [
     {
       "src": "/icons/icon-192.png",
@@ -17,6 +18,38 @@
       "src": "/icons/icon-512.png",
       "sizes": "512x512",
       "type": "image/png"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Programări",
+      "short_name": "Programări",
+      "url": "/programari",
+      "description": "Vezi programările"
+    },
+    {
+      "name": "Clienți",
+      "short_name": "Clienți",
+      "url": "/clienti",
+      "description": "Gestionează clienții"
+    },
+    {
+      "name": "Mașini",
+      "short_name": "Mașini",
+      "url": "/masini",
+      "description": "Gestionează mașinile"
+    },
+    {
+      "name": "Deviz",
+      "short_name": "Deviz",
+      "url": "/deviz",
+      "description": "Creează un deviz"
     }
   ]
 }
