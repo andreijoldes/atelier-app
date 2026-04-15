@@ -1,9 +1,10 @@
 // Layout principal al aplicației
-// Include metadata PWA, font Inter, și componenta Navbar
+// Include metadata PWA, font Inter, AuthProvider și AuthLayout
 
 import { Inter } from 'next/font/google';
 import './globals.css';
-import Navbar from '@/components/Navbar';
+import AuthProvider from '@/components/AuthProvider';
+import AuthLayout from '@/components/AuthLayout';
 
 // Font principal
 const inter = Inter({
@@ -43,19 +44,18 @@ export default function RootLayout({ children }) {
         <meta name="theme-color" content="#2563EB" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         {/* Preîncărcare pagini pentru navigație instantanee */}
+        <link rel="prefetch" href="/dashboard" />
         <link rel="prefetch" href="/clienti" />
         <link rel="prefetch" href="/programari" />
         <link rel="prefetch" href="/masini" />
         <link rel="prefetch" href="/deviz" />
       </head>
       <body className="min-h-full flex flex-col font-sans">
-        {/* Navbar prezent pe toate paginile (se ascunde pe /login) */}
-        <Navbar />
-
-        {/* Conținut principal — cu offset pentru sidebar pe desktop și bottom nav pe mobile */}
-        <main className="flex-1 md:ml-64 pb-20 md:pb-0">
-          {children}
-        </main>
+        <AuthProvider>
+          <AuthLayout>
+            {children}
+          </AuthLayout>
+        </AuthProvider>
       </body>
     </html>
   );

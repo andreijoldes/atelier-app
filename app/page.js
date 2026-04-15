@@ -1,199 +1,304 @@
-// Pagina Dashboard — ecranul principal
-// Afișează: programări azi, total clienți, lucrări în curs
+// Pagina de Autentificare (Landing Page — ruta /)
+// Formular cu tabs: Conectare / Înregistrare
+// Înregistrare necesită cod de acces valid
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
-import { DashboardSkeleton } from '@/components/Skeleton';
 
-export default function DashboardPage() {
-  // State pentru statistici
-  const [stats, setStats] = useState({
-    programariAzi: 0,
-    totalClienti: 0,
-    lucrariInCurs: 0,
-    lucrariFinalizate: 0,
-  });
-  const [programariRecente, setProgramariRecente] = useState([]);
-  const [incarcare, setIncarcare] = useState(true);
+// Codul de acces valid pentru înregistrare
+const COD_ACCES_VALID = 'BOS';
 
-  // Încarcă datele la montarea componentei
-  useEffect(() => {
-    incarcaDate();
-  }, []);
+export default function AuthPage() {
+  const router = useRouter();
+  const [activeTab, setActiveTab] = useState('login'); // 'login' sau 'register'
 
-  const incarcaDate = async () => {
+  // State-uri partajate
+  const [email, setEmail] = useState('');
+  const [parola, setParola] = useState('');
+  const [eroare, setEroare] = useState('');
+  const [succes, setSucces] = useState('');
+  const [incarcare, setIncarcare] = useState(false);
+
+  // State-uri suplimentare pentru register
+  const [codAcces, setCodAcces] = useState('');
+  const [confirmaParola, setConfirmaParola] = useState('');
+
+  // Resetare câmpuri la schimbarea tab-ului
+  const switchTab = (tab) => {
+    setActiveTab(tab);
+    setEroare('');
+    setSucces('');
+    setEmail('');
+    setParola('');
+    setCodAcces('');
+    setConfirmaParola('');
+  };
+
+  // === CONECTARE ===
+  const handleLogin = async (e) => {
+    e.preventDefault();
+    setEroare('');
+    setIncarcare(true);
+
     try {
-      // Data de azi (început și sfârșit)
-      const azi = new Date();
-      const inceputZi = new Date(azi.getFullYear(), azi.getMonth(), azi.getDate()).toISOString();
-      const sfarsitZi = new Date(azi.getFullYear(), azi.getMonth(), azi.getDate() + 1).toISOString();
-
-      // Programări azi
-      const { count: programariAzi } = await supabase
-        .from('programari')
-        .select('*', { count: 'exact', head: true })
-        .gte('data_programare', inceputZi)
-        .lt('data_programare', sfarsitZi);
-
-      // Total clienți
-      const { count: totalClienti } = await supabase
-        .from('clienti')
-        .select('*', { count: 'exact', head: true });
-
-      // Lucrări în curs
-      const { count: lucrariInCurs } = await supabase
-        .from('programari')
-        .select('*', { count: 'exact', head: true })
-        .eq('status', 'in_lucru');
-
-      // Lucrări finalizate
-      const { count: lucrariFinalizate } = await supabase
-        .from('programari')
-        .select('*', { count: 'exact', head: true })
-        .eq('status', 'finalizat');
-
-      setStats({
-        programariAzi: programariAzi || 0,
-        totalClienti: totalClienti || 0,
-        lucrariInCurs: lucrariInCurs || 0,
-        lucrariFinalizate: lucrariFinalizate || 0,
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password: parola,
       });
 
-      // Programări recente (ultimele 5)
-      const { data: recente } = await supabase
-        .from('programari')
-        .select('*, clienti(nume), masini(marca, model)')
-        .order('data_programare', { ascending: false })
-        .limit(5);
-
-      setProgramariRecente(recente || []);
-    } catch (err) {
-      console.error('Eroare la încărcarea datelor:', err);
+      if (error) {
+        setEroare('Email sau parolă incorectă. Încearcă din nou.');
+      } else {
+        router.push('/dashboard');
+      }
+    } catch {
+      setEroare('Eroare la conectare. Verifică conexiunea la internet.');
     } finally {
       setIncarcare(false);
     }
   };
 
-  // Configurare carduri statistici
-  const carduri = [
-    {
-      titlu: 'Programări Azi',
-      valoare: stats.programariAzi,
-      icon: (
-        <svg xmlns="http://www.w3.org/2000/svg" className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5" />
-        </svg>
-      ),
-      culoare: 'bg-primary/10 text-primary',
-    },
-    {
-      titlu: 'Total Clienți',
-      valoare: stats.totalClienti,
-      icon: (
-        <svg xmlns="http://www.w3.org/2000/svg" className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z" />
-        </svg>
-      ),
-      culoare: 'bg-success/10 text-success',
-    },
-    {
-      titlu: 'Lucrări în Curs',
-      valoare: stats.lucrariInCurs,
-      icon: (
-        <svg xmlns="http://www.w3.org/2000/svg" className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M11.42 15.17L17.25 21A2.652 2.652 0 0021 17.25l-5.877-5.877M11.42 15.17l2.496-3.03c.317-.384.74-.626 1.208-.766M11.42 15.17l-4.655 5.653a2.548 2.548 0 11-3.586-3.586l6.837-5.63m5.108-.233c.55-.164 1.163-.188 1.743-.14a4.5 4.5 0 004.486-6.336l-3.276 3.277a3.004 3.004 0 01-2.25-2.25l3.276-3.276a4.5 4.5 0 00-6.336 4.486c.091 1.076-.071 2.264-.904 2.95l-.102.085" />
-        </svg>
-      ),
-      culoare: 'bg-warning/10 text-warning',
-    },
-    {
-      titlu: 'Finalizate',
-      valoare: stats.lucrariFinalizate,
-      icon: (
-        <svg xmlns="http://www.w3.org/2000/svg" className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-        </svg>
-      ),
-      culoare: 'bg-primary-100 text-primary-dark',
-    },
-  ];
+  // === ÎNREGISTRARE ===
+  const handleRegister = async (e) => {
+    e.preventDefault();
+    setEroare('');
+    setSucces('');
+    setIncarcare(true);
 
-  // Funcție helper pentru formatarea statusului
-  const getStatusBadge = (status) => {
-    const config = {
-      asteptare: { label: 'Așteptare', cls: 'bg-gray-100 text-gray-600' },
-      in_lucru: { label: 'În lucru', cls: 'bg-warning/15 text-warning' },
-      finalizat: { label: 'Finalizat', cls: 'bg-success/15 text-success' },
-    };
-    const s = config[status] || config.asteptare;
-    return <span className={`inline-block px-2.5 py-1 rounded-full text-xs font-medium ${s.cls}`}>{s.label}</span>;
+    // Validare cod de acces
+    if (codAcces.trim().toUpperCase() !== COD_ACCES_VALID) {
+      setEroare('Cod de acces invalid');
+      setIncarcare(false);
+      return;
+    }
+
+    // Validare parole
+    if (parola !== confirmaParola) {
+      setEroare('Parolele nu se potrivesc.');
+      setIncarcare(false);
+      return;
+    }
+
+    if (parola.length < 6) {
+      setEroare('Parola trebuie să aibă minim 6 caractere.');
+      setIncarcare(false);
+      return;
+    }
+
+    try {
+      const { error } = await supabase.auth.signUp({
+        email,
+        password: parola,
+      });
+
+      if (error) {
+        setEroare(error.message);
+      } else {
+        setSucces('Cont creat cu succes! Verifică email-ul pentru confirmare sau conectează-te.');
+        // Auto-switch la login după 2 secunde
+        setTimeout(() => {
+          switchTab('login');
+          setEmail(email);
+        }, 2000);
+      }
+    } catch {
+      setEroare('Eroare la înregistrare. Încearcă din nou.');
+    } finally {
+      setIncarcare(false);
+    }
   };
 
-  if (incarcare) {
-    return <DashboardSkeleton />;
-  }
+  // Stiluri comune pentru input-uri
+  const inputClass = `w-full px-4 py-3 rounded-xl border border-gray-200 bg-white text-foreground placeholder:text-gray-400
+    focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all`;
 
   return (
-    <div className="p-4 md:p-8 max-w-7xl mx-auto">
-      {/* Header pagină */}
-      <div className="mb-8 animate-fade-in">
-        <h1 className="text-2xl md:text-3xl font-bold text-secondary">Dashboard</h1>
-        <p className="text-muted mt-1">Bine ai venit! Iată o privire de ansamblu asupra atelierului.</p>
-      </div>
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-50 via-white to-primary-100 px-4">
+      <div className="w-full max-w-md animate-fade-in">
+        {/* Header cu logo */}
+        <div className="text-center mb-8">
+          <div className="w-16 h-16 bg-primary rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-primary/30">
+            <svg xmlns="http://www.w3.org/2000/svg" className="w-8 h-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M11.42 15.17L17.25 21A2.652 2.652 0 0021 17.25l-5.877-5.877M11.42 15.17l2.496-3.03c.317-.384.74-.626 1.208-.766M11.42 15.17l-4.655 5.653a2.548 2.548 0 11-3.586-3.586l6.837-5.63m5.108-.233c.55-.164 1.163-.188 1.743-.14a4.5 4.5 0 004.486-6.336l-3.276 3.277a3.004 3.004 0 01-2.25-2.25l3.276-3.276a4.5 4.5 0 00-6.336 4.486c.091 1.076-.071 2.264-.904 2.95l-.102.085" />
+            </svg>
+          </div>
+          <h1 className="text-2xl font-bold text-secondary">Atelier Auto</h1>
+          <p className="text-muted mt-1">
+            {activeTab === 'login' ? 'Conectează-te pentru a continua' : 'Creează un cont nou'}
+          </p>
+        </div>
 
-      {/* Carduri statistici */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        {carduri.map((card, index) => (
-          <div
-            key={card.titlu}
-            className="bg-surface rounded-2xl p-5 shadow-sm hover:shadow-md transition-shadow animate-slide-up"
-            style={{ animationDelay: `${index * 80}ms` }}
+        {/* Tabs Login / Register */}
+        <div className="flex mb-6 bg-gray-100 rounded-xl p-1">
+          <button
+            type="button"
+            onClick={() => switchTab('login')}
+            className={`flex-1 py-2.5 text-sm font-semibold rounded-lg transition-all duration-200
+              ${activeTab === 'login'
+                ? 'bg-white text-primary shadow-sm'
+                : 'text-muted hover:text-foreground'
+              }`}
           >
-            <div className={`w-12 h-12 ${card.culoare} rounded-xl flex items-center justify-center mb-3`}>
-              {card.icon}
+            Conectare
+          </button>
+          <button
+            type="button"
+            onClick={() => switchTab('register')}
+            className={`flex-1 py-2.5 text-sm font-semibold rounded-lg transition-all duration-200
+              ${activeTab === 'register'
+                ? 'bg-white text-primary shadow-sm'
+                : 'text-muted hover:text-foreground'
+              }`}
+          >
+            Înregistrare
+          </button>
+        </div>
+
+        {/* ===== FORMULAR LOGIN ===== */}
+        {activeTab === 'login' && (
+          <form onSubmit={handleLogin} className="bg-surface rounded-2xl shadow-xl shadow-primary/5 p-8 space-y-5 animate-fade-in">
+            <div>
+              <label htmlFor="login-email" className="block text-sm font-medium text-foreground mb-1.5">
+                Adresă email
+              </label>
+              <input
+                id="login-email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="exemplu@email.com"
+                required
+                className={inputClass}
+              />
             </div>
-            <p className="text-2xl md:text-3xl font-bold text-secondary">{card.valoare}</p>
-            <p className="text-sm text-muted mt-0.5">{card.titlu}</p>
-          </div>
-        ))}
-      </div>
 
-      {/* Tabel programări recente */}
-      <div className="bg-surface rounded-2xl shadow-sm p-6 animate-slide-up" style={{ animationDelay: '300ms' }}>
-        <h2 className="text-lg font-semibold text-secondary mb-4">Programări Recente</h2>
+            <div>
+              <label htmlFor="login-parola" className="block text-sm font-medium text-foreground mb-1.5">
+                Parolă
+              </label>
+              <input
+                id="login-parola"
+                type="password"
+                value={parola}
+                onChange={(e) => setParola(e.target.value)}
+                placeholder="••••••••"
+                required
+                className={inputClass}
+              />
+            </div>
 
-        {programariRecente.length === 0 ? (
-          <p className="text-muted text-sm py-8 text-center">Nu există programări încă.</p>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-gray-100">
-                  <th className="text-left py-3 px-2 text-muted font-medium">Client</th>
-                  <th className="text-left py-3 px-2 text-muted font-medium hidden sm:table-cell">Mașină</th>
-                  <th className="text-left py-3 px-2 text-muted font-medium">Data</th>
-                  <th className="text-left py-3 px-2 text-muted font-medium">Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {programariRecente.map((p) => (
-                  <tr key={p.id} className="border-b border-gray-50 hover:bg-gray-50/50 transition-colors">
-                    <td className="py-3 px-2 font-medium">{p.clienti?.nume || '—'}</td>
-                    <td className="py-3 px-2 hidden sm:table-cell text-muted">
-                      {p.masini ? `${p.masini.marca} ${p.masini.model}` : '—'}
-                    </td>
-                    <td className="py-3 px-2 text-muted">
-                      {new Date(p.data_programare).toLocaleDateString('ro-RO', { day: '2-digit', month: 'short' })}
-                    </td>
-                    <td className="py-3 px-2">{getStatusBadge(p.status)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+            {eroare && (
+              <div className="bg-danger/10 text-danger text-sm px-4 py-3 rounded-xl">
+                {eroare}
+              </div>
+            )}
+
+            <button
+              type="submit"
+              disabled={incarcare}
+              className="w-full py-3 px-4 bg-primary hover:bg-primary-dark text-white font-semibold rounded-xl
+                transition-all duration-200 shadow-lg shadow-primary/30 hover:shadow-primary/50
+                disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98]"
+            >
+              {incarcare ? 'Se conectează...' : 'Conectare'}
+            </button>
+          </form>
         )}
+
+        {/* ===== FORMULAR REGISTER ===== */}
+        {activeTab === 'register' && (
+          <form onSubmit={handleRegister} className="bg-surface rounded-2xl shadow-xl shadow-primary/5 p-8 space-y-5 animate-fade-in">
+            <div>
+              <label htmlFor="register-email" className="block text-sm font-medium text-foreground mb-1.5">
+                Adresă email
+              </label>
+              <input
+                id="register-email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="exemplu@email.com"
+                required
+                className={inputClass}
+              />
+            </div>
+
+            <div>
+              <label htmlFor="register-parola" className="block text-sm font-medium text-foreground mb-1.5">
+                Parolă
+              </label>
+              <input
+                id="register-parola"
+                type="password"
+                value={parola}
+                onChange={(e) => setParola(e.target.value)}
+                placeholder="Minim 6 caractere"
+                required
+                className={inputClass}
+              />
+            </div>
+
+            <div>
+              <label htmlFor="register-confirma" className="block text-sm font-medium text-foreground mb-1.5">
+                Confirmă parola
+              </label>
+              <input
+                id="register-confirma"
+                type="password"
+                value={confirmaParola}
+                onChange={(e) => setConfirmaParola(e.target.value)}
+                placeholder="••••••••"
+                required
+                className={inputClass}
+              />
+            </div>
+
+            <div>
+              <label htmlFor="register-cod" className="block text-sm font-medium text-foreground mb-1.5">
+                Cod Acces <span className="text-danger">*</span>
+              </label>
+              <input
+                id="register-cod"
+                type="text"
+                value={codAcces}
+                onChange={(e) => setCodAcces(e.target.value)}
+                placeholder="Introdu codul de acces"
+                required
+                className={inputClass}
+              />
+              <p className="text-xs text-muted mt-1">Codul de acces este necesar pentru înregistrare.</p>
+            </div>
+
+            {eroare && (
+              <div className="bg-danger/10 text-danger text-sm px-4 py-3 rounded-xl">
+                {eroare}
+              </div>
+            )}
+
+            {succes && (
+              <div className="bg-success/10 text-success text-sm px-4 py-3 rounded-xl">
+                {succes}
+              </div>
+            )}
+
+            <button
+              type="submit"
+              disabled={incarcare}
+              className="w-full py-3 px-4 bg-primary hover:bg-primary-dark text-white font-semibold rounded-xl
+                transition-all duration-200 shadow-lg shadow-primary/30 hover:shadow-primary/50
+                disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98]"
+            >
+              {incarcare ? 'Se creează contul...' : 'Creează cont'}
+            </button>
+          </form>
+        )}
+
+        <p className="text-center text-xs text-muted mt-6">
+          © 2026 Atelier Auto Manager
+        </p>
       </div>
     </div>
   );

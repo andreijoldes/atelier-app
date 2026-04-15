@@ -5,7 +5,8 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
+import { useAuth } from '@/components/AuthProvider';
 
 // Iconuri SVG inline pentru navigație
 const icons = {
@@ -34,11 +35,16 @@ const icons = {
       <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
     </svg>
   ),
+  logout: (
+    <svg xmlns="http://www.w3.org/2000/svg" className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15m3 0l3-3m0 0l-3-3m3 3H9" />
+    </svg>
+  ),
 };
 
 // Lista de pagini din meniul de navigație
 const navItems = [
-  { href: '/', label: 'Dashboard', icon: icons.dashboard },
+  { href: '/dashboard', label: 'Dashboard', icon: icons.dashboard },
   { href: '/clienti', label: 'Clienți', icon: icons.clienti },
   { href: '/masini', label: 'Mașini', icon: icons.masini },
   { href: '/programari', label: 'Programări', icon: icons.programari },
@@ -47,9 +53,14 @@ const navItems = [
 
 export default function Navbar() {
   const pathname = usePathname();
+  const router = useRouter();
+  const { signOut } = useAuth();
 
-  // Nu afișăm navbar pe pagina de login
-  if (pathname === '/login') return null;
+  // Funcția de deconectare
+  const handleLogout = async () => {
+    await signOut();
+    router.push('/');
+  };
 
   return (
     <>
@@ -89,8 +100,16 @@ export default function Navbar() {
           })}
         </nav>
 
-        {/* Footer sidebar */}
-        <div className="px-4 py-4 border-t border-white/10">
+        {/* Buton Logout + Footer sidebar */}
+        <div className="px-3 py-4 border-t border-white/10 space-y-3">
+          <button
+            onClick={handleLogout}
+            className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium w-full
+              text-white/60 hover:text-white hover:bg-danger/20 transition-all duration-200"
+          >
+            {icons.logout}
+            Deconectare
+          </button>
           <p className="text-xs text-white/30 text-center">© 2026 Atelier Auto</p>
         </div>
       </aside>
@@ -115,6 +134,14 @@ export default function Navbar() {
               </Link>
             );
           })}
+          {/* Buton Logout pe mobile */}
+          <button
+            onClick={handleLogout}
+            className="flex flex-col items-center justify-center gap-0.5 px-2 py-1 rounded-lg transition-colors text-muted hover:text-danger"
+          >
+            {icons.logout}
+            <span className="text-[10px] font-medium">Ieșire</span>
+          </button>
         </div>
       </nav>
     </>

@@ -5,8 +5,10 @@
 
 -- 1. Tabela CLIENȚI
 -- Stochează informațiile despre clienții atelierului
+-- user_id leagă fiecare client de utilizatorul care l-a creat
 CREATE TABLE IF NOT EXISTS clienti (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id UUID NOT NULL DEFAULT auth.uid(),
   nume VARCHAR(100) NOT NULL,
   telefon VARCHAR(20),
   email VARCHAR(100),
@@ -72,25 +74,68 @@ ALTER TABLE programari ENABLE ROW LEVEL SECURITY;
 ALTER TABLE interventii ENABLE ROW LEVEL SECURITY;
 ALTER TABLE devize ENABLE ROW LEVEL SECURITY;
 
--- Politici RLS — permite acces complet utilizatorilor autentificați
-CREATE POLICY "Allow all for authenticated users" ON clienti
-  FOR ALL TO authenticated USING (true) WITH CHECK (true);
+-- ============================================================
+-- Politici RLS — fiecare utilizator vede DOAR datele proprii
+-- ============================================================
 
-CREATE POLICY "Allow all for authenticated users" ON masini
-  FOR ALL TO authenticated USING (true) WITH CHECK (true);
+-- CLIENȚI: acces direct prin user_id
+CREATE POLICY "Users can manage own clients" ON clienti
+  FOR ALL TO authenticated
+  USING (user_id = auth.uid())
+  WITH CHECK (user_id = auth.uid());
 
-CREATE POLICY "Allow all for authenticated users" ON programari
-  FOR ALL TO authenticated USING (true) WITH CHECK (true);
+-- MAȘINI: acces prin clientul proprietar
+CREATE POLICY "Users can manage own cars" ON masini
+  FOR ALL TO authenticated
+  USING (EXISTS (
+    SELECT 1 FROM clienti WHERE clienti.id = masini.client_id AND clienti.user_id = auth.uid()
+  ))
+  WITH CHECK (EXISTS (
+    SELECT 1 FROM clienti WHERE clienti.id = masini.client_id AND clienti.user_id = auth.uid()
+  ));
 
-CREATE POLICY "Allow all for authenticated users" ON interventii
-  FOR ALL TO authenticated USING (true) WITH CHECK (true);
+-- PROGRAMĂRI: acces prin clientul proprietar
+CREATE POLICY "Users can manage own appointments" ON programari
+  FOR ALL TO authenticated
+  USING (EXISTS (
+    SELECT 1 FROM clienti WHERE clienti.id = programari.client_id AND clienti.user_id = auth.uid()
+  ))
+  WITH CHECK (EXISTS (
+    SELECT 1 FROM clienti WHERE clienti.id = programari.client_id AND clienti.user_id = auth.uid()
+  ));
 
-CREATE POLICY "Allow all for authenticated users" ON devize
-  FOR ALL TO authenticated USING (true) WITH CHECK (true);
+-- INTERVENȚII: acces prin programare → client
+CREATE POLICY "Users can manage own interventions" ON interventii
+  FOR ALL TO authenticated
+  USING (EXISTS (
+    SELECT 1 FROM programari
+    JOIN clienti ON clienti.id = programari.client_id
+    WHERE programari.id = interventii.programare_id AND clienti.user_id = auth.uid()
+  ))
+  WITH CHECK (EXISTS (
+    SELECT 1 FROM programari
+    JOIN clienti ON clienti.id = programari.client_id
+    WHERE programari.id = interventii.programare_id AND clienti.user_id = auth.uid()
+  ));
+
+-- DEVIZE: acces prin programare → client
+CREATE POLICY "Users can manage own estimates" ON devize
+  FOR ALL TO authenticated
+  USING (EXISTS (
+    SELECT 1 FROM programari
+    JOIN clienti ON clienti.id = programari.client_id
+    WHERE programari.id = devize.programare_id AND clienti.user_id = auth.uid()
+  ))
+  WITH CHECK (EXISTS (
+    SELECT 1 FROM programari
+    JOIN clienti ON clienti.id = programari.client_id
+    WHERE programari.id = devize.programare_id AND clienti.user_id = auth.uid()
+  ));
 
 -- ============================================================
 -- Indexuri pentru performanță
 -- ============================================================
+CREATE INDEX idx_clienti_user ON clienti(user_id);
 CREATE INDEX idx_masini_client ON masini(client_id);
 CREATE INDEX idx_programari_data ON programari(data_programare);
 CREATE INDEX idx_programari_status ON programari(status);
