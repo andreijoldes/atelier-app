@@ -50,7 +50,6 @@ export default function RootLayout({ children }) {
         <link rel="prefetch" href="/dashboard" />
         <link rel="prefetch" href="/clienti" />
         <link rel="prefetch" href="/programari" />
-        <link rel="prefetch" href="/masini" />
         <link rel="prefetch" href="/deviz" />
         {/* Înregistrare Service Worker pentru PWA */}
         <script

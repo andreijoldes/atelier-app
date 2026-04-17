@@ -1,5 +1,5 @@
 // Pagina Dashboard — ecranul principal (ruta /dashboard)
-// Afișează: programări azi, total clienți, lucrări în curs
+// Afișează: programări azi, total clienți, lucrări în curs — high contrast
 
 'use client';
 
@@ -104,7 +104,7 @@ export default function DashboardPage() {
       culoare: 'bg-success/10 text-success',
     },
     {
-      titlu: 'Lucrări în Curs',
+      titlu: 'În Lucru',
       valoare: stats.lucrariInCurs,
       icon: (
         <svg xmlns="http://www.w3.org/2000/svg" className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
@@ -128,12 +128,12 @@ export default function DashboardPage() {
   // Funcție helper pentru formatarea statusului
   const getStatusBadge = (status) => {
     const config = {
-      asteptare: { label: 'Așteptare', cls: 'bg-gray-100 text-gray-600' },
+      asteptare: { label: 'Așteptare', cls: 'bg-gray-100 text-gray-700' },
       in_lucru: { label: 'În lucru', cls: 'bg-warning/15 text-warning' },
       finalizat: { label: 'Finalizat', cls: 'bg-success/15 text-success' },
     };
     const s = config[status] || config.asteptare;
-    return <span className={`inline-block px-2.5 py-1 rounded-full text-xs font-medium ${s.cls}`}>{s.label}</span>;
+    return <span className={`inline-block px-3 py-1 rounded-full text-xs font-bold ${s.cls}`}>{s.label}</span>;
   };
 
   if (incarcare) {
@@ -145,7 +145,7 @@ export default function DashboardPage() {
       {/* Header pagină */}
       <div className="mb-8 animate-fade-in">
         <h1 className="text-2xl md:text-3xl font-bold text-secondary">Dashboard</h1>
-        <p className="text-muted mt-1">Bine ai venit! Iată o privire de ansamblu asupra atelierului.</p>
+        <p className="text-muted mt-1 text-base">Bine ai venit! Iată o privire de ansamblu asupra atelierului.</p>
       </div>
 
       {/* Carduri statistici */}
@@ -159,33 +159,33 @@ export default function DashboardPage() {
             <div className={`w-12 h-12 ${card.culoare} rounded-xl flex items-center justify-center mb-3`}>
               {card.icon}
             </div>
-            <p className="text-2xl md:text-3xl font-bold text-secondary">{card.valoare}</p>
-            <p className="text-sm text-muted mt-0.5">{card.titlu}</p>
+            <p className="text-3xl font-bold text-secondary">{card.valoare}</p>
+            <p className="text-sm text-muted mt-0.5 font-medium">{card.titlu}</p>
           </div>
         ))}
       </div>
 
       {/* Tabel programări recente */}
       <div className="bg-surface rounded-2xl shadow-sm p-6 animate-slide-up" style={{ animationDelay: '300ms' }}>
-        <h2 className="text-lg font-semibold text-secondary mb-4">Programări Recente</h2>
+        <h2 className="text-lg font-bold text-secondary mb-4">Programări Recente</h2>
 
         {programariRecente.length === 0 ? (
-          <p className="text-muted text-sm py-8 text-center">Nu există programări încă.</p>
+          <p className="text-muted text-base py-8 text-center">Nu există programări încă.</p>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="w-full text-base">
               <thead>
                 <tr className="border-b border-gray-100">
-                  <th className="text-left py-3 px-2 text-muted font-medium">Client</th>
-                  <th className="text-left py-3 px-2 text-muted font-medium hidden sm:table-cell">Mașină</th>
-                  <th className="text-left py-3 px-2 text-muted font-medium">Data</th>
-                  <th className="text-left py-3 px-2 text-muted font-medium">Status</th>
+                  <th className="text-left py-3 px-2 text-muted font-semibold text-sm">Client</th>
+                  <th className="text-left py-3 px-2 text-muted font-semibold text-sm hidden sm:table-cell">Mașină</th>
+                  <th className="text-left py-3 px-2 text-muted font-semibold text-sm">Data</th>
+                  <th className="text-left py-3 px-2 text-muted font-semibold text-sm">Status</th>
                 </tr>
               </thead>
               <tbody>
                 {programariRecente.map((p) => (
                   <tr key={p.id} className="border-b border-gray-50 hover:bg-gray-50/50 transition-colors">
-                    <td className="py-3 px-2 font-medium">{p.clienti?.nume || '—'}</td>
+                    <td className="py-3 px-2 font-semibold text-secondary">{p.clienti?.nume || '—'}</td>
                     <td className="py-3 px-2 hidden sm:table-cell text-muted">
                       {p.masini ? `${p.masini.marca} ${p.masini.model}` : '—'}
                     </td>
@@ -201,7 +201,7 @@ export default function DashboardPage() {
         )}
       </div>
 
-      {/* Buton Deconectare — vizibil pe mobile, ascuns pe desktop (sidebar are propriul logout) */}
+      {/* Buton Deconectare — vizibil pe mobile */}
       <div className="mt-8 mb-28 md:hidden animate-slide-up" style={{ animationDelay: '400ms' }}>
         <button
           onClick={async () => {
@@ -209,7 +209,7 @@ export default function DashboardPage() {
             router.push('/');
           }}
           className="flex items-center justify-center gap-3 w-full py-4 px-6 rounded-2xl
-            bg-red-50 text-red-600 font-semibold text-base
+            bg-red-50 text-red-600 font-bold text-base
             hover:bg-red-100 active:scale-[0.98] transition-all duration-200"
         >
           <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
