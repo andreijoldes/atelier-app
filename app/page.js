@@ -151,7 +151,7 @@ export default function AuthPage() {
       if (error) {
         setForgotError(error.message);
       } else {
-        setForgotMessage('Verifică emailul — ți-am trimis un link de resetare');
+        setForgotMessage('Dacă acest email este asociat unui cont, vei primi un link de resetare. Verifică și folderul Spam.');
       }
     } catch {
       setForgotError('Eroare la trimitere. Încearcă din nou.');
