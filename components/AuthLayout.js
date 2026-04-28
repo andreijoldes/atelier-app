@@ -14,8 +14,8 @@ export default function AuthLayout({ children }) {
   const pathname = usePathname();
   const router = useRouter();
 
-  // Ruta de autentificare (landing page)
-  const isAuthPage = pathname === '/';
+  // Rute publice (fără navbar, fără redirect)
+  const isAuthPage = pathname === '/' || pathname === '/update-parola';
 
   useEffect(() => {
     if (loading) return;

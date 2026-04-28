@@ -1,6 +1,7 @@
 // Pagina de Autentificare (Landing Page — ruta /)
 // Formular cu tabs: Conectare / Înregistrare
 // Înregistrare necesită cod de acces valid
+// Include funcționalitate „Ai uitat parola?"
 
 'use client';
 
@@ -26,6 +27,29 @@ export default function AuthPage() {
   const [codAcces, setCodAcces] = useState('');
   const [confirmaParola, setConfirmaParola] = useState('');
 
+  // State-uri pentru forgot password modal
+  const [showForgotModal, setShowForgotModal] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState('');
+  const [forgotLoading, setForgotLoading] = useState(false);
+  const [forgotMessage, setForgotMessage] = useState('');
+  const [forgotError, setForgotError] = useState('');
+
+  // Mesaj de succes venit din query params (ex: după resetare parolă)
+  const [loginSuccessMsg, setLoginSuccessMsg] = useState('');
+
+  // Verifică query params la montare
+  useState(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const msg = params.get('mesaj');
+      if (msg) {
+        setLoginSuccessMsg(msg);
+        // Curăță URL-ul
+        window.history.replaceState({}, '', '/');
+      }
+    }
+  });
+
   // Resetare câmpuri la schimbarea tab-ului
   const switchTab = (tab) => {
     setActiveTab(tab);
@@ -41,6 +65,7 @@ export default function AuthPage() {
   const handleLogin = async (e) => {
     e.preventDefault();
     setEroare('');
+    setLoginSuccessMsg('');
     setIncarcare(true);
 
     try {
@@ -109,6 +134,44 @@ export default function AuthPage() {
     } finally {
       setIncarcare(false);
     }
+  };
+
+  // === FORGOT PASSWORD ===
+  const handleForgotPassword = async (e) => {
+    e.preventDefault();
+    setForgotError('');
+    setForgotMessage('');
+    setForgotLoading(true);
+
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(forgotEmail, {
+        redirectTo: 'https://atelier-app.vercel.app/update-parola',
+      });
+
+      if (error) {
+        setForgotError(error.message);
+      } else {
+        setForgotMessage('Verifică emailul — ți-am trimis un link de resetare');
+      }
+    } catch {
+      setForgotError('Eroare la trimitere. Încearcă din nou.');
+    } finally {
+      setForgotLoading(false);
+    }
+  };
+
+  const openForgotModal = () => {
+    setForgotEmail(email || '');
+    setForgotMessage('');
+    setForgotError('');
+    setShowForgotModal(true);
+  };
+
+  const closeForgotModal = () => {
+    setShowForgotModal(false);
+    setForgotEmail('');
+    setForgotMessage('');
+    setForgotError('');
   };
 
   // Stiluri comune pentru input-uri
@@ -196,6 +259,12 @@ export default function AuthPage() {
               </div>
             )}
 
+            {loginSuccessMsg && (
+              <div className="bg-success/10 text-success text-sm px-4 py-3 rounded-xl">
+                {loginSuccessMsg}
+              </div>
+            )}
+
             <button
               type="submit"
               disabled={incarcare}
@@ -205,6 +274,17 @@ export default function AuthPage() {
             >
               {incarcare ? 'Se conectează...' : 'Conectare'}
             </button>
+
+            {/* Link „Ai uitat parola?" — mic și discret */}
+            <div className="text-center pt-1">
+              <button
+                type="button"
+                onClick={openForgotModal}
+                className="text-[13px] text-gray-400 hover:text-gray-600 transition-colors duration-200 cursor-pointer"
+              >
+                Ai uitat parola?
+              </button>
+            </div>
           </form>
         )}
 
@@ -300,6 +380,74 @@ export default function AuthPage() {
           © 2026 Atelier Auto Manager
         </p>
       </div>
+
+      {/* ===== MODAL FORGOT PASSWORD ===== */}
+      {showForgotModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center px-4 animate-modal-overlay"
+          style={{ backgroundColor: 'rgba(15, 23, 42, 0.6)' }}
+          onClick={(e) => { if (e.target === e.currentTarget) closeForgotModal(); }}
+        >
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 relative animate-modal-content">
+            {/* Buton X închidere */}
+            <button
+              type="button"
+              onClick={closeForgotModal}
+              className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-all"
+              aria-label="Închide"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+
+            <h2 className="text-lg font-bold text-secondary mb-1">Resetare parolă</h2>
+            <p className="text-sm text-muted mb-5">Introdu adresa de email asociată contului tău.</p>
+
+            <form onSubmit={handleForgotPassword} className="space-y-4">
+              <div>
+                <label htmlFor="forgot-email" className="block text-sm font-medium text-foreground mb-1.5">
+                  Adresă email
+                </label>
+                <input
+                  id="forgot-email"
+                  type="email"
+                  value={forgotEmail}
+                  onChange={(e) => setForgotEmail(e.target.value)}
+                  placeholder="exemplu@email.com"
+                  required
+                  autoFocus
+                  className={inputClass}
+                />
+              </div>
+
+              {forgotError && (
+                <div className="bg-danger/10 text-danger text-sm px-4 py-3 rounded-xl">
+                  {forgotError}
+                </div>
+              )}
+
+              {forgotMessage && (
+                <div className="bg-success/10 text-success text-sm px-4 py-3 rounded-xl">
+                  {forgotMessage}
+                </div>
+              )}
+
+              {!forgotMessage && (
+                <button
+                  type="submit"
+                  disabled={forgotLoading}
+                  className="w-full py-3 px-4 bg-primary hover:bg-primary-dark text-white font-semibold rounded-xl
+                    transition-all duration-200 shadow-lg shadow-primary/30 hover:shadow-primary/50
+                    disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98]"
+                >
+                  {forgotLoading ? 'Se trimite...' : 'Trimite link de resetare'}
+                </button>
+              )}
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

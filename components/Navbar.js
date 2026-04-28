@@ -2,12 +2,15 @@
 // Pe mobile: bară de jos (bottom navigation)
 // Pe desktop: sidebar lateral stâng
 // Meniu: Dashboard, Clienți, Programări, Devize (fără Mașini — accesibile prin client)
+// Include: Schimbă parola, Confirmare deconectare
 
 'use client';
 
+import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/components/AuthProvider';
+import { supabase } from '@/lib/supabase';
 
 // Iconuri SVG inline pentru navigație
 const icons = {
@@ -36,6 +39,11 @@ const icons = {
       <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15m3 0l3-3m0 0l-3-3m3 3H9" />
     </svg>
   ),
+  schimbaParola: (
+    <svg xmlns="http://www.w3.org/2000/svg" className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 5.25a3 3 0 013 3m3 0a6 6 0 01-7.029 5.912c-.563-.097-1.159.026-1.563.43L10.5 17.25H8.25v2.25H6v2.25H2.25v-2.818c0-.597.237-1.17.659-1.591l6.499-6.499c.404-.404.527-1 .43-1.563A6 6 0 1121.75 8.25z" />
+    </svg>
+  ),
 };
 
 // Lista de pagini din meniu — simplificată (fără Mașini)
@@ -51,10 +59,88 @@ export default function Navbar() {
   const router = useRouter();
   const { signOut } = useAuth();
 
-  // Funcția de deconectare
-  const handleLogout = async () => {
+  // State-uri pentru modale
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [showChangePasswordModal, setShowChangePasswordModal] = useState(false);
+
+  // State-uri pentru schimbare parolă
+  const [parolaCurenta, setParolaCurenta] = useState('');
+  const [parolaNoua, setParolaNoua] = useState('');
+  const [confirmaParolaNoua, setConfirmaParolaNoua] = useState('');
+  const [changePasswordLoading, setChangePasswordLoading] = useState(false);
+  const [changePasswordError, setChangePasswordError] = useState('');
+  const [changePasswordSuccess, setChangePasswordSuccess] = useState('');
+
+  // Deschide modalul de logout
+  const handleLogoutClick = () => {
+    setShowLogoutModal(true);
+  };
+
+  // Confirmare deconectare
+  const handleLogoutConfirm = async () => {
     await signOut();
+    setShowLogoutModal(false);
     router.push('/');
+  };
+
+  // Deschide modalul de schimbare parolă
+  const openChangePasswordModal = () => {
+    setParolaCurenta('');
+    setParolaNoua('');
+    setConfirmaParolaNoua('');
+    setChangePasswordError('');
+    setChangePasswordSuccess('');
+    setShowChangePasswordModal(true);
+  };
+
+  // Schimbare parolă
+  const handleChangePassword = async (e) => {
+    e.preventDefault();
+    setChangePasswordError('');
+    setChangePasswordSuccess('');
+
+    if (parolaNoua !== confirmaParolaNoua) {
+      setChangePasswordError('Parolele noi nu se potrivesc.');
+      return;
+    }
+
+    if (parolaNoua.length < 6) {
+      setChangePasswordError('Parola nouă trebuie să aibă minim 6 caractere.');
+      return;
+    }
+
+    setChangePasswordLoading(true);
+
+    try {
+      // Verificăm parola curentă prin re-autentificare
+      const { data: { user } } = await supabase.auth.getUser();
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: user.email,
+        password: parolaCurenta,
+      });
+
+      if (signInError) {
+        setChangePasswordError('Parola curentă este incorectă.');
+        setChangePasswordLoading(false);
+        return;
+      }
+
+      // Actualizăm parola
+      const { error } = await supabase.auth.updateUser({ password: parolaNoua });
+
+      if (error) {
+        setChangePasswordError(error.message);
+      } else {
+        setChangePasswordSuccess('Parola a fost schimbată');
+        setTimeout(() => {
+          setShowChangePasswordModal(false);
+        }, 2000);
+      }
+    } catch {
+      setChangePasswordError('Eroare la schimbarea parolei. Încearcă din nou.');
+    } finally {
+      setChangePasswordLoading(false);
+    }
   };
 
   // Verifică dacă pathname-ul curent face parte dintr-un nav item
@@ -63,6 +149,10 @@ export default function Navbar() {
     if (href === '/dashboard') return pathname === '/dashboard';
     return pathname.startsWith(href);
   };
+
+  // Stiluri comune pentru input-uri din modals
+  const inputClass = `w-full px-4 py-3 rounded-xl border border-gray-200 bg-white text-foreground placeholder:text-gray-400
+    focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all`;
 
   return (
     <>
@@ -102,17 +192,25 @@ export default function Navbar() {
           })}
         </nav>
 
-        {/* Buton Logout + Footer sidebar */}
-        <div className="px-3 py-4 border-t border-white/10 space-y-3">
+        {/* Buton Schimbă parola + Logout + Footer sidebar */}
+        <div className="px-3 py-4 border-t border-white/10 space-y-1">
           <button
-            onClick={handleLogout}
+            onClick={openChangePasswordModal}
+            className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold w-full
+              text-white/60 hover:text-white hover:bg-white/5 transition-all duration-200"
+          >
+            {icons.schimbaParola}
+            Schimbă parola
+          </button>
+          <button
+            onClick={handleLogoutClick}
             className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold w-full
               text-white/60 hover:text-white hover:bg-danger/20 transition-all duration-200"
           >
             {icons.logout}
             Deconectare
           </button>
-          <p className="text-xs text-white/30 text-center">© 2026 Atelier Auto</p>
+          <p className="text-xs text-white/30 text-center pt-2">© 2026 Atelier Auto</p>
         </div>
       </aside>
 
@@ -138,6 +236,160 @@ export default function Navbar() {
           })}
         </div>
       </nav>
+
+      {/* ===== MODAL CONFIRMARE DECONECTARE ===== */}
+      {showLogoutModal && (
+        <div
+          className="fixed inset-0 z-[60] flex items-center justify-center px-4 animate-modal-overlay"
+          style={{ backgroundColor: 'rgba(15, 23, 42, 0.6)' }}
+          onClick={(e) => { if (e.target === e.currentTarget) setShowLogoutModal(false); }}
+        >
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 relative animate-modal-content">
+            {/* Buton X închidere */}
+            <button
+              type="button"
+              onClick={() => setShowLogoutModal(false)}
+              className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-all"
+              aria-label="Închide"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+
+            {/* Icon avertisment */}
+            <div className="w-14 h-14 bg-danger/10 rounded-full flex items-center justify-center mx-auto mb-4">
+              <svg xmlns="http://www.w3.org/2000/svg" className="w-7 h-7 text-danger" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15m3 0l3-3m0 0l-3-3m3 3H9" />
+              </svg>
+            </div>
+
+            <h2 className="text-lg font-bold text-secondary text-center mb-2">
+              Ești sigur că vrei să te deconectezi?
+            </h2>
+            <p className="text-sm text-muted text-center mb-6">
+              Vei fi redirecționat la pagina de conectare.
+            </p>
+
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={() => setShowLogoutModal(false)}
+                className="flex-1 py-3 px-4 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold rounded-xl
+                  transition-all duration-200 active:scale-[0.98]"
+              >
+                Anulează
+              </button>
+              <button
+                type="button"
+                onClick={handleLogoutConfirm}
+                className="flex-1 py-3 px-4 bg-danger hover:bg-red-700 text-white font-semibold rounded-xl
+                  transition-all duration-200 shadow-lg shadow-danger/30 active:scale-[0.98]"
+              >
+                Da, deconectează-mă
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ===== MODAL SCHIMBARE PAROLĂ ===== */}
+      {showChangePasswordModal && (
+        <div
+          className="fixed inset-0 z-[60] flex items-center justify-center px-4 animate-modal-overlay"
+          style={{ backgroundColor: 'rgba(15, 23, 42, 0.6)' }}
+          onClick={(e) => { if (e.target === e.currentTarget) setShowChangePasswordModal(false); }}
+        >
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 relative animate-modal-content">
+            {/* Buton X închidere */}
+            <button
+              type="button"
+              onClick={() => setShowChangePasswordModal(false)}
+              className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-all"
+              aria-label="Închide"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+
+            <h2 className="text-lg font-bold text-secondary mb-1">Schimbă parola</h2>
+            <p className="text-sm text-muted mb-5">Introdu parola curentă și parola nouă dorită.</p>
+
+            <form onSubmit={handleChangePassword} className="space-y-4">
+              <div>
+                <label htmlFor="parola-curenta" className="block text-sm font-medium text-foreground mb-1.5">
+                  Parola curentă
+                </label>
+                <input
+                  id="parola-curenta"
+                  type="password"
+                  value={parolaCurenta}
+                  onChange={(e) => setParolaCurenta(e.target.value)}
+                  placeholder="••••••••"
+                  required
+                  autoFocus
+                  className={inputClass}
+                />
+              </div>
+
+              <div>
+                <label htmlFor="parola-noua-nav" className="block text-sm font-medium text-foreground mb-1.5">
+                  Parola nouă
+                </label>
+                <input
+                  id="parola-noua-nav"
+                  type="password"
+                  value={parolaNoua}
+                  onChange={(e) => setParolaNoua(e.target.value)}
+                  placeholder="Minim 6 caractere"
+                  required
+                  className={inputClass}
+                />
+              </div>
+
+              <div>
+                <label htmlFor="confirma-parola-nav" className="block text-sm font-medium text-foreground mb-1.5">
+                  Confirmă parola nouă
+                </label>
+                <input
+                  id="confirma-parola-nav"
+                  type="password"
+                  value={confirmaParolaNoua}
+                  onChange={(e) => setConfirmaParolaNoua(e.target.value)}
+                  placeholder="••••••••"
+                  required
+                  className={inputClass}
+                />
+              </div>
+
+              {changePasswordError && (
+                <div className="bg-danger/10 text-danger text-sm px-4 py-3 rounded-xl">
+                  {changePasswordError}
+                </div>
+              )}
+
+              {changePasswordSuccess && (
+                <div className="bg-success/10 text-success text-sm px-4 py-3 rounded-xl">
+                  {changePasswordSuccess}
+                </div>
+              )}
+
+              {!changePasswordSuccess && (
+                <button
+                  type="submit"
+                  disabled={changePasswordLoading}
+                  className="w-full py-3 px-4 bg-primary hover:bg-primary-dark text-white font-semibold rounded-xl
+                    transition-all duration-200 shadow-lg shadow-primary/30 hover:shadow-primary/50
+                    disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98]"
+                >
+                  {changePasswordLoading ? 'Se schimbă...' : 'Schimbă parola'}
+                </button>
+              )}
+            </form>
+          </div>
+        </div>
+      )}
     </>
   );
 }
