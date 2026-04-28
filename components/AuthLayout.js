@@ -14,24 +14,27 @@ export default function AuthLayout({ children }) {
   const pathname = usePathname();
   const router = useRouter();
 
-  // Rute publice (fără navbar, fără redirect)
-  const isAuthPage = pathname === '/' || pathname === '/update-parola';
+  // Rute publice (fără navbar, fără redirect forțat la login)
+  const isPublicPage = pathname === '/' || pathname === '/update-parola';
+  // Doar pagina de login — dacă user e logat, redirect la dashboard
+  const isLoginPage = pathname === '/';
 
   useEffect(() => {
     if (loading) return;
 
-    // Utilizator logat pe pagina de auth → redirect la dashboard
-    if (user && isAuthPage) {
+    // Utilizator logat pe pagina de LOGIN → redirect la dashboard
+    // (NU pe /update-parola — acolo trebuie să poată schimba parola)
+    if (user && isLoginPage) {
       router.replace('/dashboard');
       return;
     }
 
     // Utilizator nelogat pe pagina protejată → redirect la login
-    if (!user && !isAuthPage) {
+    if (!user && !isPublicPage) {
       router.replace('/');
       return;
     }
-  }, [user, loading, isAuthPage, router]);
+  }, [user, loading, isPublicPage, isLoginPage, router]);
 
   // Loading state — spinner simplu
   if (loading) {
@@ -42,8 +45,8 @@ export default function AuthLayout({ children }) {
     );
   }
 
-  // Pagina de autentificare — fără navbar
-  if (isAuthPage) {
+  // Pagină publică — fără navbar
+  if (isPublicPage) {
     return <>{children}</>;
   }
 

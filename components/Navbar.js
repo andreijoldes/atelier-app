@@ -202,15 +202,13 @@ export default function Navbar() {
             {icons.schimbaParola}
             Schimbă parola
           </button>
+          <p className="text-xs text-white/30 text-center pt-2">© 2026 Atelier Auto</p>
           <button
             onClick={handleLogoutClick}
-            className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold w-full
-              text-white/60 hover:text-white hover:bg-danger/20 transition-all duration-200"
+            className="text-[11px] text-white/25 hover:text-white/50 transition-colors duration-200 mx-auto block mt-1"
           >
-            {icons.logout}
             Deconectare
           </button>
-          <p className="text-xs text-white/30 text-center pt-2">© 2026 Atelier Auto</p>
         </div>
       </aside>
 
